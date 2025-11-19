@@ -1,189 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Discord‑Style Chat with Login</title>
-  <style>
-    body { margin:0; font-family: Arial, sans-serif; background:#1e1f22; color:white; }
-    .center { display:flex; justify-content:center; align-items:center; height:100vh; }
-    .login-box { background:#2b2d31; padding:30px; border-radius:10px; width:320px; }
-    input { width:100%; padding:10px; margin-top:10px; border:none; border-radius:5px; }
-    button { width:100%; margin-top:15px; padding:10px; background:#5865f2; border:none; border-radius:5px; color:white; cursor:pointer; }
-    button:hover { background:#4752c4; }
-    /* Chat layout */
-    .app { display:flex; height:100vh; }
-    .servers { width:80px; background:#1e1f22; padding:10px; overflow-y:auto; }
-    .channels { width:250px; background:#2b2d31; padding:10px; overflow-y:auto; }
-    .chat { flex:1; display:flex; flex-direction:column; background:#313338; }
-    .messages { flex:1; overflow-y:auto; padding:20px; }
-    .message { margin-bottom:12px; }
-    .sender { font-weight:bold; }
-    .input-area { display:flex; padding:10px; background:#2b2d31; }
-    .input-area input { flex:1; margin-right:10px; }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Discord-Style Chat (Login + Servers)</title>
+
+  <!-- Link to external CSS (request 'c' to get the CSS file) -->
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<div id="login" class="center">
-  <div class="login-box">
-    <h2>Create / Login</h2>
-    <input id="username" placeholder="Username" />
-    <input id="password" type="password" placeholder="Password" />
-    <button onclick="register()">Create Account</button>
-    <button onclick="login()">Login</button>
-    <p id="login-msg" style="color:#fa5757;"></p>
-  </div>
-</div>
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div id="login" class="center">
+    <div class="login-box">
+      <h2>Create / Login</h2>
 
-<div id="app" class="app" style="display:none;">
-  <!-- Server List -->
-  <div class="servers" id="serverList"></div>
+      <label for="username">Username</label>
+      <input id="username" placeholder="Username" autocomplete="username" />
 
-  <!-- Channels Panel -->
-  <div class="channels">
-    <h3 id="serverName"></h3>
-    <div id="channelList"></div>
-    <input id="newChannel" placeholder="New channel name" />
-    <button onclick="createChannel()">Add Channel</button>
-  </div>
+      <label for="password">Password</label>
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
 
-  <!-- Chat -->
-  <div class="chat">
-    <div class="messages" id="messages"></div>
-    <div class="input-area">
-      <input id="msgInput" placeholder="Message..." />
-      <button onclick="sendMessage()">Send</button>
+      <button id="createAccountBtn">Create Account</button>
+      <button id="loginBtn">Login</button>
+
+      <p id="login-msg" class="error"></p>
+      <p class="hint">Usernames are filtered for profanity. Your servers are private to your account.</p>
     </div>
   </div>
-</div>
 
-<script>
-/* —— AI Bad‑word Filter (very simple) —— */
-const badWords = ["badword1","badword2","fuck","shit","bitch"];
-function cleanName(name){
-  for(const w of badWords){
-    let reg = new RegExp(w, "gi");
-    name = name.replace(reg, "***");
-  }
-  return name;
-}
+  <!-- ===== MAIN APP (hidden until login) ===== -->
+  <div id="app" class="app" style="display:none;">
 
-/* —— Local Storage Structure ——
-users = {
-  username: { password:"", servers:{ serverCode:{ name:"", channels:{}, }} }
-}
-*/
-let users = JSON.parse(localStorage.getItem("users") || "{}");
-let currentUser = null;
-let currentServer = null;
-let currentChannel = null;
+    <!-- LEFT: Server list (each server has a code) -->
+    <aside id="serverList" class="servers" aria-label="Your servers">
+      <!-- populated by JS -->
+    </aside>
 
-function save(){ localStorage.setItem("users", JSON.stringify(users)); }
+    <!-- MIDDLE: Channels + Chat -->
+    <section class="main">
 
-function register(){
-  let user = cleanName(document.getElementById("username").value.trim());
-  let pass = document.getElementById("password").value;
-  if(!user || !pass) return msg("Enter username + password");
-  if(users[user]) return msg("User already exists");
-  users[user] = { password:pass, servers:{} };
-  save(); msg("Account created! Login now.");
-}
+      <!-- Channels panel -->
+      <div class="channels">
+        <div class="channels-header">
+          <h3 id="serverName">Select a server</h3>
+        </div>
 
-function login(){
-  let user = document.getElementById("username").value.trim();
-  let pass = document.getElementById("password").value;
-  if(!users[user] || users[user].password !== pass) return msg("Wrong username or password");
-  currentUser = user;
-  document.getElementById("login").style.display="none";
-  document.getElementById("app").style.display="flex";
-  loadServers();
-}
+        <div id="channelList" class="channel-list">
+          <!-- channels inserted here -->
+        </div>
 
-function msg(t){ document.getElementById("login-msg").innerText = t; }
+        <div class="channel-creator">
+          <input id="newChannel" placeholder="New channel name" />
+          <button id="createChannelBtn">Add Channel</button>
+        </div>
 
-/* —— Servers —— */
-function loadServers(){
-  let box = document.getElementById("serverList");
-  box.innerHTML = "";
-  let userData = users[currentUser];
-  Object.keys(userData.servers).forEach(code=>{
-    let btn = document.createElement("button");
-    btn.innerText = code;
-    btn.style = "width:100%; margin-bottom:10px; height:50px;";
-    btn.onclick = ()=>openServer(code);
-    box.appendChild(btn);
-  });
-  // create new server button
-  let add = document.createElement("button");
-  add.innerText = "+";
-  add.style = "width:100%; height:50px; background:#5865f2;";
-  add.onclick = newServer;
-  box.appendChild(add);
-}
+        <div class="server-actions">
+          <button id="leaveServerBtn">Leave Server</button>
+          <button id="deleteServerBtn">Delete Server</button>
+        </div>
+      </div>
 
-function newServer(){
-  let name = prompt("Server Name?");
-  if(!name) return;
-  name = cleanName(name);
-  let code = Math.random().toString(36).substring(2,7);
-  users[currentUser].servers[code] = { name:name, channels:{} };
-  save(); loadServers();
-}
+      <!-- Chat panel -->
+      <div class="chat">
+        <header class="chat-header">
+          <div id="headerChannel"># —</div>
+        </header>
 
-function openServer(code){
-  currentServer = code;
-  document.getElementById("serverName").innerText = users[currentUser].servers[code].name + " ("+code+")";
-  loadChannels();
-}
+        <main id="messages" class="messages" aria-live="polite">
+          <!-- messages rendered here -->
+        </main>
 
-/* —— Channels —— */
-function loadChannels(){
-  let list = document.getElementById("channelList");
-  list.innerHTML = "";
-  let chs = users[currentUser].servers[currentServer].channels;
-  Object.keys(chs).forEach(ch=>{
-    let b = document.createElement("button");
-    b.innerText = ch;
-    b.style = "width:100%; margin-bottom:6px;";
-    b.onclick = ()=>openChannel(ch);
-    list.appendChild(b);
-  });
-}
+        <div class="input-area">
+          <input id="msgInput" placeholder="Message... (press Enter to send)" />
+          <button id="sendBtn">Send</button>
+        </div>
+      </div>
+    </section>
 
-function createChannel(){
-  let name = cleanName(document.getElementById("newChannel").value.trim());
-  if(!name) return;
-  users[currentUser].servers[currentServer].channels[name] = [];
-  save(); loadChannels();
-  document.getElementById("newChannel").value = "";
-}
+    <!-- RIGHT: Members -->
+    <aside id="members" class="members" aria-label="Members">
+      <div class="members-header">ONLINE</div>
+      <div id="membersList" class="members-list"></div>
+    </aside>
+  </div>
 
-function openChannel(ch){ currentChannel = ch; loadMessages(); }
+  <!-- Fallback note if JS is disabled -->
+  <noscript>
+    <div style="background:#ffdddd;color:#660000;padding:12px;text-align:center;">
+      This app requires JavaScript. Please enable JavaScript in your browser.
+    </div>
+  </noscript>
 
-/* —— Messages —— */
-function loadMessages(){
-  let box = document.getElementById("messages");
-  box.innerHTML = "";
-  let msgs = users[currentUser].servers[currentServer].channels[currentChannel];
-  msgs.forEach(m=>{
-    let div = document.createElement("div");
-    div.className="message";
-    div.innerHTML = `<span class='sender'>${m.user}:</span> ${m.text}`;
-    box.appendChild(div);
-  });
-  box.scrollTop = box.scrollHeight;
-}
-
-function sendMessage(){
-  let text = document.getElementById("msgInput").value;
-  if(!text) return;
-  users[currentUser].servers[currentServer].channels[currentChannel].push({ user:currentUser, text:text });
-  save();
-  document.getElementById("msgInput").value = "";
-  loadMessages();
-}
-</script>
-
+  <!-- Link to external JS (request 'j' to get the JS file) -->
+  <script src="app.js" defer></script>
 </body>
 </html>
