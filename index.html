@@ -1,189 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Discord‑Style Chat (Working)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord‑Style Chat with Login</title>
   <style>
-    :root{
-      --bg:#313338; --panel:#2b2d31; --accent:#5865f2; --muted:#9aa0a6; --card:#2b2d31;
-      --input:#1e1f22; --white:#e6e6e6;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,system-ui;}
-    body{display:flex;height:100vh;background:var(--bg);color:var(--white)}
-
-    /* left server column */
-    .servers{width:72px;background:#1e1f22;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:14px}
-    .server{width:48px;height:48px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer}
-    .server.small{background:#2f3136;border-radius:10px;color:var(--muted)}
-
-    /* channels column */
-    .channels{width:260px;background:var(--panel);padding:14px;display:flex;flex-direction:column}
-    .channels .title{font-weight:700;margin-bottom:8px}
-    .channel{padding:8px 10px;border-radius:6px;color:var(--white);opacity:0.9;cursor:pointer;margin-bottom:6px}
-    .channel:hover{background:#3b3e44}
-    .channel.active{background:#404249}
-
-    /* center chat */
-    .chat{flex:1;display:flex;flex-direction:column;background:var(--bg)}
-    .chat .header{height:56px;padding:12px 18px;background:var(--panel);border-bottom:1px solid #232428;display:flex;align-items:center;gap:12px}
-    .chat .messages{flex:1;padding:18px;overflow:auto}
-
-    .msg{margin-bottom:16px;display:flex;gap:12px;align-items:flex-start}
-    .avatar{width:40px;height:40px;border-radius:8px;background:#444;display:flex;align-items:center;justify-content:center;color:var(--white);font-weight:700}
-    .bubble{background:var(--card);padding:10px 12px;border-radius:8px;max-width:720px}
-    .meta{font-size:13px;color:var(--muted);margin-bottom:6px}
-
-    /* input */
-    .composer{padding:12px;background:var(--panel);border-top:1px solid #232428;display:flex;gap:10px;align-items:center}
-    .composer input[type="text"], .composer textarea{flex:1;background:var(--input);border:1px solid #2b2d31;padding:10px;border-radius:8px;color:var(--white);outline:none}
-    .composer button{background:var(--accent);border:none;color:white;padding:10px 14px;border-radius:8px;cursor:pointer}
-
-    /* right members */
-    .members{width:220px;background:var(--panel);padding:14px;border-left:1px solid #232428;display:flex;flex-direction:column}
-    .member{padding:8px;border-radius:6px;background:#333;margin-bottom:6px}
-
-    /* mobile adjustments */
-    @media(max-width:880px){.channels{display:none}.members{display:none}.servers{width:60px}.channels{width:0}}
+    body { margin:0; font-family: Arial, sans-serif; background:#1e1f22; color:white; }
+    .center { display:flex; justify-content:center; align-items:center; height:100vh; }
+    .login-box { background:#2b2d31; padding:30px; border-radius:10px; width:320px; }
+    input { width:100%; padding:10px; margin-top:10px; border:none; border-radius:5px; }
+    button { width:100%; margin-top:15px; padding:10px; background:#5865f2; border:none; border-radius:5px; color:white; cursor:pointer; }
+    button:hover { background:#4752c4; }
+    /* Chat layout */
+    .app { display:flex; height:100vh; }
+    .servers { width:80px; background:#1e1f22; padding:10px; overflow-y:auto; }
+    .channels { width:250px; background:#2b2d31; padding:10px; overflow-y:auto; }
+    .chat { flex:1; display:flex; flex-direction:column; background:#313338; }
+    .messages { flex:1; overflow-y:auto; padding:20px; }
+    .message { margin-bottom:12px; }
+    .sender { font-weight:bold; }
+    .input-area { display:flex; padding:10px; background:#2b2d31; }
+    .input-area input { flex:1; margin-right:10px; }
   </style>
 </head>
 <body>
-  <div class="servers">
-    <div class="server">GC</div>
-    <div class="server small">+</div>
+
+<div id="login" class="center">
+  <div class="login-box">
+    <h2>Create / Login</h2>
+    <input id="username" placeholder="Username" />
+    <input id="password" type="password" placeholder="Password" />
+    <button onclick="register()">Create Account</button>
+    <button onclick="login()">Login</button>
+    <p id="login-msg" style="color:#fa5757;"></p>
+  </div>
+</div>
+
+<div id="app" class="app" style="display:none;">
+  <!-- Server List -->
+  <div class="servers" id="serverList"></div>
+
+  <!-- Channels Panel -->
+  <div class="channels">
+    <h3 id="serverName"></h3>
+    <div id="channelList"></div>
+    <input id="newChannel" placeholder="New channel name" />
+    <button onclick="createChannel()">Add Channel</button>
   </div>
 
-  <div class="channels" id="channelList">
-    <div class="title">CHANNELS</div>
-    <!-- channels will be populated by JS -->
-    <div style="margin-top:6px;display:flex;gap:8px">
-      <input id="newChannelInput" placeholder="New channel" style="flex:1;padding:8px;border-radius:6px;border:1px solid #232428;background:#26282b;color:var(--white)" />
-      <button id="addChannelBtn" style="padding:8px 10px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer">Add</button>
-    </div>
-  </div>
-
+  <!-- Chat -->
   <div class="chat">
-    <div class="header"><div style="font-weight:700" id="headerChannel"># general</div></div>
-
-    <div class="messages" id="messages" aria-live="polite"></div>
-
-    <div class="composer">
-      <input id="messageInput" type="text" placeholder="Message #general — press Enter to send" autocomplete="off" />
-      <button id="sendBtn">Send</button>
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <input id="msgInput" placeholder="Message..." />
+      <button onclick="sendMessage()">Send</button>
     </div>
   </div>
+</div>
 
-  <div class="members" id="members">
-    <div style="font-weight:700;margin-bottom:8px">ONLINE</div>
-    <!-- members populated by JS -->
-  </div>
+<script>
+/* —— AI Bad‑word Filter (very simple) —— */
+const badWords = ["badword1","badword2","fuck","shit","bitch"];
+function cleanName(name){
+  for(const w of badWords){
+    let reg = new RegExp(w, "gi");
+    name = name.replace(reg, "***");
+  }
+  return name;
+}
 
-  <script>
-    // === Simple working chat app (no server) ===
-    // features: channel switching, enter-to-send, localStorage persistence, basic UI
+/* —— Local Storage Structure ——
+users = {
+  username: { password:"", servers:{ serverCode:{ name:"", channels:{}, }} }
+}
+*/
+let users = JSON.parse(localStorage.getItem("users") || "{}");
+let currentUser = null;
+let currentServer = null;
+let currentChannel = null;
 
-    const defaultState = {
-      channels: {
-        general: { name: 'general', messages: [ {id: genId(), author: 'User1', text: 'Hello!', t: Date.now()}, {id: genId(), author: 'User2', text: 'Welcome — this is a local demo.', t: Date.now()} ] },
-        chat: { name: 'chat', messages: [] },
-        memes: { name: 'memes', messages: [] }
-      },
-      current: 'general',
-      members: ['You','User1','User2']
-    }
+function save(){ localStorage.setItem("users", JSON.stringify(users)); }
 
-    function genId(){return Math.random().toString(36).slice(2,9)}
+function register(){
+  let user = cleanName(document.getElementById("username").value.trim());
+  let pass = document.getElementById("password").value;
+  if(!user || !pass) return msg("Enter username + password");
+  if(users[user]) return msg("User already exists");
+  users[user] = { password:pass, servers:{} };
+  save(); msg("Account created! Login now.");
+}
 
-    function loadState(){
-      try{const raw = localStorage.getItem('dc_demo_v1'); if(raw) return JSON.parse(raw)}catch(e){}
-      return defaultState;
-    }
-    function saveState(){localStorage.setItem('dc_demo_v1', JSON.stringify(state))}
+function login(){
+  let user = document.getElementById("username").value.trim();
+  let pass = document.getElementById("password").value;
+  if(!users[user] || users[user].password !== pass) return msg("Wrong username or password");
+  currentUser = user;
+  document.getElementById("login").style.display="none";
+  document.getElementById("app").style.display="flex";
+  loadServers();
+}
 
-    let state = loadState();
+function msg(t){ document.getElementById("login-msg").innerText = t; }
 
-    // elements
-    const messagesEl = document.getElementById('messages');
-    const headerEl = document.getElementById('headerChannel');
-    const msgInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const channelListEl = document.getElementById('channelList');
-    const membersEl = document.getElementById('members');
-    const newChannelInput = document.getElementById('newChannelInput');
-    const addChannelBtn = document.getElementById('addChannelBtn');
+/* —— Servers —— */
+function loadServers(){
+  let box = document.getElementById("serverList");
+  box.innerHTML = "";
+  let userData = users[currentUser];
+  Object.keys(userData.servers).forEach(code=>{
+    let btn = document.createElement("button");
+    btn.innerText = code;
+    btn.style = "width:100%; margin-bottom:10px; height:50px;";
+    btn.onclick = ()=>openServer(code);
+    box.appendChild(btn);
+  });
+  // create new server button
+  let add = document.createElement("button");
+  add.innerText = "+";
+  add.style = "width:100%; height:50px; background:#5865f2;";
+  add.onclick = newServer;
+  box.appendChild(add);
+}
 
-    function renderChannels(){
-      // remove existing channel buttons (except header and new channel controls)
-      const existing = Array.from(channelListEl.querySelectorAll('.channel')); existing.forEach(e=>e.remove());
-      const frag = document.createDocumentFragment();
-      Object.keys(state.channels).forEach(key => {
-        const ch = state.channels[key];
-        const div = document.createElement('div');
-        div.className = 'channel' + (state.current===key? ' active':'');
-        div.textContent = '# ' + ch.name;
-        div.dataset.key = key;
-        div.addEventListener('click',()=>{ state.current = key; saveState(); render(); });
-        frag.appendChild(div);
-      });
-      channelListEl.insertBefore(frag, channelListEl.children[1] || channelListEl.lastChild);
-    }
+function newServer(){
+  let name = prompt("Server Name?");
+  if(!name) return;
+  name = cleanName(name);
+  let code = Math.random().toString(36).substring(2,7);
+  users[currentUser].servers[code] = { name:name, channels:{} };
+  save(); loadServers();
+}
 
-    function renderMembers(){
-      // clear previous member nodes except title
-      const children = Array.from(membersEl.children).slice(0,1);
-      membersEl.innerHTML = '';
-      membersEl.appendChild(children[0]);
-      state.members.forEach(m=>{
-        const d = document.createElement('div'); d.className='member'; d.textContent = m; membersEl.appendChild(d);
-      });
-    }
+function openServer(code){
+  currentServer = code;
+  document.getElementById("serverName").innerText = users[currentUser].servers[code].name + " ("+code+")";
+  loadChannels();
+}
 
-    function renderMessages(){
-      messagesEl.innerHTML='';
-      const channel = state.channels[state.current];
-      headerEl.textContent = '# ' + channel.name;
-      channel.messages.forEach(m => {
-        const row = document.createElement('div'); row.className = 'msg';
-        const av = document.createElement('div'); av.className='avatar'; av.textContent = m.author.charAt(0).toUpperCase();
-        const content = document.createElement('div');
-        const meta = document.createElement('div'); meta.className='meta'; meta.textContent = m.author + ' • ' + new Date(m.t).toLocaleString();
-        const bubble = document.createElement('div'); bubble.className='bubble'; bubble.textContent = m.text;
-        content.appendChild(meta); content.appendChild(bubble);
-        row.appendChild(av); row.appendChild(content);
-        messagesEl.appendChild(row);
-      });
-      // scroll to bottom
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
+/* —— Channels —— */
+function loadChannels(){
+  let list = document.getElementById("channelList");
+  list.innerHTML = "";
+  let chs = users[currentUser].servers[currentServer].channels;
+  Object.keys(chs).forEach(ch=>{
+    let b = document.createElement("button");
+    b.innerText = ch;
+    b.style = "width:100%; margin-bottom:6px;";
+    b.onclick = ()=>openChannel(ch);
+    list.appendChild(b);
+  });
+}
 
-    function render(){ renderChannels(); renderMessages(); renderMembers(); }
+function createChannel(){
+  let name = cleanName(document.getElementById("newChannel").value.trim());
+  if(!name) return;
+  users[currentUser].servers[currentServer].channels[name] = [];
+  save(); loadChannels();
+  document.getElementById("newChannel").value = "";
+}
 
-    // send message
-    function sendMessage(){
-      const txt = msgInput.value.trim(); if(!txt) return;
-      const ch = state.channels[state.current];
-      const m = { id: genId(), author: 'You', text: txt, t: Date.now() };
-      ch.messages.push(m);
-      msgInput.value=''; saveState(); renderMessages();
-    }
+function openChannel(ch){ currentChannel = ch; loadMessages(); }
 
-    // create channel
-    addChannelBtn.addEventListener('click', ()=>{
-      const name = newChannelInput.value.trim(); if(!name) return; const key = name.toLowerCase().replace(/[^a-z0-9\-]/g,'-');
-      if(state.channels[key]){ alert('Channel exists'); return; }
-      state.channels[key] = { name, messages: [] }; state.current = key; newChannelInput.value=''; saveState(); render();
-    });
+/* —— Messages —— */
+function loadMessages(){
+  let box = document.getElementById("messages");
+  box.innerHTML = "";
+  let msgs = users[currentUser].servers[currentServer].channels[currentChannel];
+  msgs.forEach(m=>{
+    let div = document.createElement("div");
+    div.className="message";
+    div.innerHTML = `<span class='sender'>${m.user}:</span> ${m.text}`;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
 
-    // send button & Enter key
-    sendBtn.addEventListener('click', sendMessage);
-    msgInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); sendMessage(); } });
+function sendMessage(){
+  let text = document.getElementById("msgInput").value;
+  if(!text) return;
+  users[currentUser].servers[currentServer].channels[currentChannel].push({ user:currentUser, text:text });
+  save();
+  document.getElementById("msgInput").value = "";
+  loadMessages();
+}
+</script>
 
-    // initialize
-    render();
-
-    // expose for debugging
-    window._dc_demo = { state, render, saveState };
-  </script>
 </body>
 </html>
