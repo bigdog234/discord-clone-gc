@@ -1,446 +1,189 @@
-import React, { useEffect, useState, useRef } from "react";
-
-// GC Web App - Single-file React component
-// Drop this component into a React + Tailwind project (Vite or CRA with Tailwind)
-// Default export is the app component.
-
-export default function GCApp() {
-  // --- Basic app state ---
-  const [username, setUsername] = useState(() => {
-    return localStorage.getItem("gc_username") || "Guest" + Math.floor(Math.random() * 900 + 100);
-  });
-  const [currentRoom, setCurrentRoom] = useState(() => {
-    return localStorage.getItem("gc_currentRoom") || "General";
-  });
-  const [rooms, setRooms] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("gc_rooms_v1")) || { General: { name: "General", messages: [] } };
-    } catch (e) {
-      return { General: { name: "General", messages: [] } };
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Discord‑Style Chat (Working)</title>
+  <style>
+    :root{
+      --bg:#313338; --panel:#2b2d31; --accent:#5865f2; --muted:#9aa0a6; --card:#2b2d31;
+      --input:#1e1f22; --white:#e6e6e6;
     }
-  });
-  const [message, setMessage] = useState("");
-  const [search, setSearch] = useState("");
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [typingUsers, setTypingUsers] = useState({});
-  const messageListRef = useRef(null);
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,system-ui;}
+    body{display:flex;height:100vh;background:var(--bg);color:var(--white)}
 
-  // helper to persist
-  useEffect(() => {
-    localStorage.setItem("gc_rooms_v1", JSON.stringify(rooms));
-  }, [rooms]);
-  useEffect(() => localStorage.setItem("gc_username", username), [username]);
-  useEffect(() => localStorage.setItem("gc_currentRoom", currentRoom), [currentRoom]);
+    /* left server column */
+    .servers{width:72px;background:#1e1f22;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:14px}
+    .server{width:48px;height:48px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer}
+    .server.small{background:#2f3136;border-radius:10px;color:var(--muted)}
 
-  // scroll to bottom when messages update
-  useEffect(() => {
-    const el = messageListRef.current;
-    if (el) {
-      requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight;
-      });
-    }
-  }, [rooms, currentRoom]);
+    /* channels column */
+    .channels{width:260px;background:var(--panel);padding:14px;display:flex;flex-direction:column}
+    .channels .title{font-weight:700;margin-bottom:8px}
+    .channel{padding:8px 10px;border-radius:6px;color:var(--white);opacity:0.9;cursor:pointer;margin-bottom:6px}
+    .channel:hover{background:#3b3e44}
+    .channel.active{background:#404249}
 
-  // --- Room functions ---
-  function createRoom(name) {
-    if (!name) return;
-    if (rooms[name]) {
-      alert("Room already exists");
-      return;
-    }
-    setRooms((r) => ({ ...r, [name]: { name, messages: [] } }));
-    setCurrentRoom(name);
-  }
+    /* center chat */
+    .chat{flex:1;display:flex;flex-direction:column;background:var(--bg)}
+    .chat .header{height:56px;padding:12px 18px;background:var(--panel);border-bottom:1px solid #232428;display:flex;align-items:center;gap:12px}
+    .chat .messages{flex:1;padding:18px;overflow:auto}
 
-  function sendMessage({ text, files = [] }) {
-    const timestamp = new Date().toISOString();
-    const msg = {
-      id: Math.random().toString(36).slice(2, 9),
-      author: username,
-      text,
-      files: files.map((f) => ({ name: f.name, size: f.size, dataUrl: f.dataUrl })),
-      reactions: {},
-      edited: false,
-      ts: timestamp,
-    };
-    setRooms((r) => {
-      const next = { ...r };
-      next[currentRoom] = { ...next[currentRoom], messages: [...next[currentRoom].messages, msg] };
-      return next;
-    });
-    setMessage("");
-    setTypingUsers((t) => ({ ...t, [username]: false }));
+    .msg{margin-bottom:16px;display:flex;gap:12px;align-items:flex-start}
+    .avatar{width:40px;height:40px;border-radius:8px;background:#444;display:flex;align-items:center;justify-content:center;color:var(--white);font-weight:700}
+    .bubble{background:var(--card);padding:10px 12px;border-radius:8px;max-width:720px}
+    .meta{font-size:13px;color:var(--muted);margin-bottom:6px}
 
-    // optional: simulated bot response for fun
-    simulateBotResponse(text);
-  }
+    /* input */
+    .composer{padding:12px;background:var(--panel);border-top:1px solid #232428;display:flex;gap:10px;align-items:center}
+    .composer input[type="text"], .composer textarea{flex:1;background:var(--input);border:1px solid #2b2d31;padding:10px;border-radius:8px;color:var(--white);outline:none}
+    .composer button{background:var(--accent);border:none;color:white;padding:10px 14px;border-radius:8px;cursor:pointer}
 
-  function simulateBotResponse(userText) {
-    // simple fun behaviour: if message includes "bot" or "help" the bot replies
-    const lower = userText.toLowerCase();
-    if (lower.includes("@bot") || lower.includes("help") || lower.includes("joke")) {
-      const reply = {
-        id: Math.random().toString(36).slice(2, 9),
-        author: "HelperBot",
-        text: `Hi ${username}! You wrote: "${userText}" — type @bot help for quick commands (channels, /me).`,
-        files: [],
-        reactions: {},
-        edited: false,
-        ts: new Date(Date.now() + 800).toISOString(),
-      };
-      setTimeout(() => {
-        setRooms((r) => {
-          const next = { ...r };
-          if (!next[currentRoom]) return next;
-          next[currentRoom] = { ...next[currentRoom], messages: [...next[currentRoom].messages, reply] };
-          return next;
-        });
-      }, 800 + Math.random() * 600);
-    }
-  }
+    /* right members */
+    .members{width:220px;background:var(--panel);padding:14px;border-left:1px solid #232428;display:flex;flex-direction:column}
+    .member{padding:8px;border-radius:6px;background:#333;margin-bottom:6px}
 
-  function addReaction(messageId, emoji) {
-    setRooms((r) => {
-      const next = { ...r };
-      const msgs = next[currentRoom].messages.map((m) => {
-        if (m.id !== messageId) return m;
-        const reactions = { ...m.reactions };
-        reactions[emoji] = (reactions[emoji] || 0) + 1;
-        return { ...m, reactions };
-      });
-      next[currentRoom] = { ...next[currentRoom], messages: msgs };
-      return next;
-    });
-  }
+    /* mobile adjustments */
+    @media(max-width:880px){.channels{display:none}.members{display:none}.servers{width:60px}.channels{width:0}}
+  </style>
+</head>
+<body>
+  <div class="servers">
+    <div class="server">GC</div>
+    <div class="server small">+</div>
+  </div>
 
-  function deleteMessage(messageId) {
-    setRooms((r) => {
-      const next = { ...r };
-      next[currentRoom] = { ...next[currentRoom], messages: next[currentRoom].messages.filter((m) => m.id !== messageId) };
-      return next;
-    });
-  }
-
-  function editMessage(messageId, newText) {
-    setRooms((r) => {
-      const next = { ...r };
-      next[currentRoom] = {
-        ...next[currentRoom],
-        messages: next[currentRoom].messages.map((m) => (m.id === messageId ? { ...m, text: newText, edited: true } : m)),
-      };
-      return next;
-    });
-  }
-
-  // file upload handler: convert selected files to dataURLs for local preview + storage
-  async function handleFiles(files) {
-    const arr = Array.from(files || []);
-    const readPromises = arr.map((f) =>
-      new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve({ name: f.name, size: f.size, dataUrl: e.target.result });
-        reader.readAsDataURL(f);
-      })
-    );
-    return Promise.all(readPromises);
-  }
-
-  // typing indicator
-  useEffect(() => {
-    const timeout = setInterval(() => {
-      // clear typing indicator for others after some time
-      setTypingUsers((t) => {
-        const next = { ...t };
-        Object.keys(next).forEach((k) => {
-          if (next[k] && Date.now() - next[k].since > 4000) delete next[k];
-        });
-        return next;
-      });
-    }, 2000);
-    return () => clearInterval(timeout);
-  }, []);
-
-  function setUserTyping(isTyping) {
-    setTypingUsers((t) => ({ ...t, [username]: isTyping ? { since: Date.now() } : false }));
-  }
-
-  // search within current room
-  const messagesToShow = (rooms[currentRoom]?.messages || []).filter((m) => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return m.text.toLowerCase().includes(s) || m.author.toLowerCase().includes(s);
-  });
-
-  // file input ref
-  const fileRef = useRef(null);
-
-  // keyboard submit: Enter to send, Shift+Enter for newline
-  function handleKeyDown(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (message.trim()) sendMessage({ text: message });
-    }
-  }
-
-  // quick commands / slash commands support
-  async function tryHandleSlashCommands(text) {
-    if (!text.startsWith("/")) return false;
-    const parts = text.slice(1).split(" ");
-    const cmd = parts[0].toLowerCase();
-    const arg = parts.slice(1).join(" ");
-
-    if (cmd === "join") {
-      if (!arg) {
-        alert("Usage: /join room-name");
-        return true;
-      }
-      if (!rooms[arg]) createRoom(arg);
-      setCurrentRoom(arg);
-      return true;
-    }
-    if (cmd === "me") {
-      sendMessage({ text: `* ${username} ${arg}` });
-      return true;
-    }
-    if (cmd === "whoami") {
-      sendMessage({ text: `I am ${username}` });
-      return true;
-    }
-    if (cmd === "nick") {
-      if (!arg) return true;
-      setUsername(arg);
-      return true;
-    }
-    // unknown command
-    sendMessage({ text: `Unknown command: ${cmd}. Try /join, /me, /nick` });
-    return true;
-  }
-
-  // handle file selection + send
-  async function handleSendWithFiles(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const fdata = await handleFiles(files);
-    sendMessage({ text: message, files: fdata });
-    // reset file input
-    e.target.value = null;
-  }
-
-  // small helpers for formatting time
-  function prettyTime(iso) {
-    const d = new Date(iso);
-    return d.toLocaleString();
-  }
-
-  // simple export/import state
-  function exportState() {
-    const data = JSON.stringify({ rooms, username, currentRoom }, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "gc-export.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-  function importStateFromFile(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const parsed = JSON.parse(e.target.result);
-        if (parsed.rooms) setRooms(parsed.rooms);
-        if (parsed.username) setUsername(parsed.username);
-        if (parsed.currentRoom) setCurrentRoom(parsed.currentRoom);
-      } catch (err) {
-        alert("Invalid file");
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  // UI
-  return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className={`w-72 p-3 border-r bg-white transition-transform ${showSidebar ? "" : "-translate-x-full"}`}>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold">GC</h2>
-          <div className="text-sm text-gray-500">Signed in as <strong>{username}</strong></div>
-        </div>
-
-        <div className="mb-3">
-          <label className="block text-xs text-gray-500">Switch user</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full mt-1 p-2 border rounded" />
-        </div>
-
-        <div className="mb-2">
-          <label className="block text-xs text-gray-500">Search room</label>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} className="w-full mt-1 p-2 border rounded" placeholder="Search messages or authors" />
-        </div>
-
-        <div className="mb-3">
-          <label className="block text-xs text-gray-500">Rooms</label>
-          <div className="mt-2 space-y-2">
-            {Object.keys(rooms).map((r) => (
-              <button key={r} onClick={() => setCurrentRoom(r)} className={`w-full text-left p-2 rounded ${r === currentRoom ? "bg-blue-50 border" : "hover:bg-gray-50"}`}>
-                <div className="flex justify-between">
-                  <div className="font-medium">{r}</div>
-                  <div className="text-xs text-gray-400">{rooms[r].messages.length}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 flex gap-2">
-            <input id="newRoom" className="flex-1 p-2 border rounded" placeholder="New room name" onKeyDown={(e) => { if (e.key === 'Enter') createRoom(e.target.value); }} />
-            <button onClick={() => { const v = document.getElementById('newRoom').value; createRoom(v); document.getElementById('newRoom').value = ''; }} className="px-3 py-2 bg-blue-600 text-white rounded">Create</button>
-          </div>
-        </div>
-
-        <div className="mt-4 text-sm text-gray-600">
-          <div className="mb-2">Tips:</div>
-          <ul className="list-disc pl-5">
-            <li>Slash commands: <code>/join room-name</code>, <code>/me</code>, <code>/nick newname</code></li>
-            <li>Use <code>@bot</code> or the word "help" for a quick helper response.</li>
-            <li>Export / import the whole state below.</li>
-          </ul>
-        </div>
-
-        <div className="mt-4 flex gap-2">
-          <button onClick={() => exportState()} className="flex-1 p-2 border rounded">Export</button>
-          <label className="flex-1 p-2 border rounded text-center cursor-pointer">
-            Import
-            <input type="file" accept="application/json" onChange={(e) => importStateFromFile(e.target.files[0])} className="hidden" />
-          </label>
-        </div>
-      </aside>
-
-      {/* Main area */}
-      <main className="flex-1 flex flex-col">
-        <header className="p-3 border-b bg-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowSidebar((s) => !s)} className="p-2 rounded hover:bg-gray-100">☰</button>
-            <h1 className="text-xl font-semibold">#{currentRoom}</h1>
-            <div className="text-sm text-gray-500">{rooms[currentRoom]?.messages.length || 0} messages</div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-gray-500">{Object.keys(typingUsers).some((k) => typingUsers[k]) ? "someone is typing..." : ""}</div>
-            <button className="p-2 rounded hover:bg-gray-100" onClick={() => { setRooms({ General: { name: 'General', messages: [] } }); setCurrentRoom('General'); }}>Reset</button>
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-hidden flex">
-          <section className="flex-1 p-4 flex flex-col">
-            {/* messages list */}
-            <div ref={messageListRef} className="flex-1 overflow-auto p-2 bg-white border rounded">
-              {messagesToShow.length === 0 ? (
-                <div className="text-center text-gray-400 mt-8">No messages yet — say hi 👋</div>
-              ) : (
-                messagesToShow.map((m) => (
-                  <article key={m.id} className="mb-3 p-2 border-b last:border-b-0">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold">{m.author} {m.author === 'HelperBot' ? <span className="text-xs text-gray-400 ml-2">bot</span> : null}</div>
-                        <div className="text-xs text-gray-400">{prettyTime(m.ts)} {m.edited ? "· edited" : ""}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => addReaction(m.id, "👍")} className="px-2 py-1 rounded hover:bg-gray-100">👍</button>
-                        <button onClick={() => addReaction(m.id, "😂")} className="px-2 py-1 rounded hover:bg-gray-100">😂</button>
-                        {m.author === username ? (
-                          <button onClick={() => { const newText = prompt('Edit message', m.text); if (newText != null) editMessage(m.id, newText); }} className="px-2 py-1 rounded hover:bg-gray-100">edit</button>
-                        ) : null}
-                        {m.author === username || username === 'Guest' ? (
-                          <button onClick={() => { if (confirm('Delete message?')) deleteMessage(m.id); }} className="px-2 py-1 rounded hover:bg-gray-100">del</button>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="mt-2 whitespace-pre-wrap">{m.text}</div>
-                    {m.files && m.files.length > 0 ? (
-                      <div className="mt-2 grid grid-cols-3 gap-2">
-                        {m.files.map((f, i) => (
-                          <div key={i} className="border rounded p-1 text-xs">
-                            <div className="truncate">{f.name}</div>
-                            {f.dataUrl && f.dataUrl.startsWith('data:image') ? <img src={f.dataUrl} alt={f.name} className="mt-1 max-h-32 object-contain" /> : null}
-                            <div className="text-gray-400 text-xs">{Math.round(f.size / 1024)} KB</div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {m.reactions && Object.keys(m.reactions).length > 0 ? (
-                      <div className="mt-2 flex gap-2 text-sm">
-                        {Object.entries(m.reactions).map(([k, v]) => (
-                          <div key={k} className="px-2 py-1 border rounded">{k} {v}</div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </article>
-                ))
-              )}
-            </div>
-
-            {/* typing indicator */}
-            <div className="mt-2 text-xs text-gray-500">{Object.keys(typingUsers).filter((k) => typingUsers[k] && k !== username).join(', ')}</div>
-
-            {/* message composer */}
-            <div className="mt-3 bg-white p-3 border rounded">
-              <div className="flex gap-2">
-                <textarea
-                  value={message}
-                  onChange={(e) => { setMessage(e.target.value); setUserTyping(e.target.value.length > 0); }}
-                  onKeyDown={handleKeyDown}
-                  placeholder={`Message #${currentRoom}. Press Enter to send, Shift+Enter for newline.`}
-                  className="flex-1 p-2 border rounded h-24 resize-none"
-                />
-                <div className="w-36 flex flex-col gap-2">
-                  <input ref={fileRef} onChange={handleSendWithFiles} type="file" multiple className="" />
-                  <button onClick={async () => {
-                    // check for slash command
-                    const handled = await tryHandleSlashCommands(message.trim());
-                    if (!handled) sendMessage({ text: message });
-                  }} className="p-2 bg-blue-600 text-white rounded">Send</button>
-                  <button onClick={() => { setMessage(''); setUserTyping(false); }} className="p-2 border rounded">Clear</button>
-                </div>
-              </div>
-
-              <div className="mt-2 text-xs text-gray-500">Commands: /join, /me, /nick, /whoami</div>
-            </div>
-          </section>
-
-          {/* right column: members & info */}
-          <aside className="w-72 p-3 border-l bg-white">
-            <div className="font-semibold mb-2">Members</div>
-            <div className="text-sm text-gray-600 mb-4">(local demo — members represent usernames you've used on this browser)</div>
-            <div className="space-y-2 mb-4">
-              {/* list of unique authors in current room */}
-              {Array.from(new Set((rooms[currentRoom]?.messages || []).map((m) => m.author))).map((u) => (
-                <div key={u} className="flex items-center justify-between p-2 border rounded">
-                  <div>
-                    <div className="font-medium">{u}</div>
-                    <div className="text-xs text-gray-400">joined (local)</div>
-                  </div>
-                  <div className="text-sm text-gray-500">{u === username ? 'You' : ''}</div>
-                </div>
-              ))}
-
-              {((rooms[currentRoom]?.messages || []).length === 0) && (
-                <div className="text-sm text-gray-400">No members yet — send a message to appear here.</div>
-              )}
-            </div>
-
-            <div className="mt-4">
-              <div className="font-semibold mb-2">Room actions</div>
-              <div className="flex gap-2">
-                <button onClick={() => { const copy = JSON.stringify(rooms[currentRoom] || {}); navigator.clipboard.writeText(copy); alert('Room copied to clipboard'); }} className="flex-1 p-2 border rounded">Copy room</button>
-                <button onClick={() => { if (confirm('Delete this room?')) { const next = { ...rooms }; delete next[currentRoom]; setRooms(next); setCurrentRoom(Object.keys(next)[0] || 'General'); } }} className="flex-1 p-2 border rounded">Delete</button>
-              </div>
-            </div>
-
-            <div className="mt-4 text-xs text-gray-500">This demo stores everything in your browser's localStorage. To share with others, export and send the .json file or deploy with a backend.</div>
-          </aside>
-        </div>
-      </main>
+  <div class="channels" id="channelList">
+    <div class="title">CHANNELS</div>
+    <!-- channels will be populated by JS -->
+    <div style="margin-top:6px;display:flex;gap:8px">
+      <input id="newChannelInput" placeholder="New channel" style="flex:1;padding:8px;border-radius:6px;border:1px solid #232428;background:#26282b;color:var(--white)" />
+      <button id="addChannelBtn" style="padding:8px 10px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer">Add</button>
     </div>
-  );
-}
+  </div>
+
+  <div class="chat">
+    <div class="header"><div style="font-weight:700" id="headerChannel"># general</div></div>
+
+    <div class="messages" id="messages" aria-live="polite"></div>
+
+    <div class="composer">
+      <input id="messageInput" type="text" placeholder="Message #general — press Enter to send" autocomplete="off" />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <div class="members" id="members">
+    <div style="font-weight:700;margin-bottom:8px">ONLINE</div>
+    <!-- members populated by JS -->
+  </div>
+
+  <script>
+    // === Simple working chat app (no server) ===
+    // features: channel switching, enter-to-send, localStorage persistence, basic UI
+
+    const defaultState = {
+      channels: {
+        general: { name: 'general', messages: [ {id: genId(), author: 'User1', text: 'Hello!', t: Date.now()}, {id: genId(), author: 'User2', text: 'Welcome — this is a local demo.', t: Date.now()} ] },
+        chat: { name: 'chat', messages: [] },
+        memes: { name: 'memes', messages: [] }
+      },
+      current: 'general',
+      members: ['You','User1','User2']
+    }
+
+    function genId(){return Math.random().toString(36).slice(2,9)}
+
+    function loadState(){
+      try{const raw = localStorage.getItem('dc_demo_v1'); if(raw) return JSON.parse(raw)}catch(e){}
+      return defaultState;
+    }
+    function saveState(){localStorage.setItem('dc_demo_v1', JSON.stringify(state))}
+
+    let state = loadState();
+
+    // elements
+    const messagesEl = document.getElementById('messages');
+    const headerEl = document.getElementById('headerChannel');
+    const msgInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const channelListEl = document.getElementById('channelList');
+    const membersEl = document.getElementById('members');
+    const newChannelInput = document.getElementById('newChannelInput');
+    const addChannelBtn = document.getElementById('addChannelBtn');
+
+    function renderChannels(){
+      // remove existing channel buttons (except header and new channel controls)
+      const existing = Array.from(channelListEl.querySelectorAll('.channel')); existing.forEach(e=>e.remove());
+      const frag = document.createDocumentFragment();
+      Object.keys(state.channels).forEach(key => {
+        const ch = state.channels[key];
+        const div = document.createElement('div');
+        div.className = 'channel' + (state.current===key? ' active':'');
+        div.textContent = '# ' + ch.name;
+        div.dataset.key = key;
+        div.addEventListener('click',()=>{ state.current = key; saveState(); render(); });
+        frag.appendChild(div);
+      });
+      channelListEl.insertBefore(frag, channelListEl.children[1] || channelListEl.lastChild);
+    }
+
+    function renderMembers(){
+      // clear previous member nodes except title
+      const children = Array.from(membersEl.children).slice(0,1);
+      membersEl.innerHTML = '';
+      membersEl.appendChild(children[0]);
+      state.members.forEach(m=>{
+        const d = document.createElement('div'); d.className='member'; d.textContent = m; membersEl.appendChild(d);
+      });
+    }
+
+    function renderMessages(){
+      messagesEl.innerHTML='';
+      const channel = state.channels[state.current];
+      headerEl.textContent = '# ' + channel.name;
+      channel.messages.forEach(m => {
+        const row = document.createElement('div'); row.className = 'msg';
+        const av = document.createElement('div'); av.className='avatar'; av.textContent = m.author.charAt(0).toUpperCase();
+        const content = document.createElement('div');
+        const meta = document.createElement('div'); meta.className='meta'; meta.textContent = m.author + ' • ' + new Date(m.t).toLocaleString();
+        const bubble = document.createElement('div'); bubble.className='bubble'; bubble.textContent = m.text;
+        content.appendChild(meta); content.appendChild(bubble);
+        row.appendChild(av); row.appendChild(content);
+        messagesEl.appendChild(row);
+      });
+      // scroll to bottom
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function render(){ renderChannels(); renderMessages(); renderMembers(); }
+
+    // send message
+    function sendMessage(){
+      const txt = msgInput.value.trim(); if(!txt) return;
+      const ch = state.channels[state.current];
+      const m = { id: genId(), author: 'You', text: txt, t: Date.now() };
+      ch.messages.push(m);
+      msgInput.value=''; saveState(); renderMessages();
+    }
+
+    // create channel
+    addChannelBtn.addEventListener('click', ()=>{
+      const name = newChannelInput.value.trim(); if(!name) return; const key = name.toLowerCase().replace(/[^a-z0-9\-]/g,'-');
+      if(state.channels[key]){ alert('Channel exists'); return; }
+      state.channels[key] = { name, messages: [] }; state.current = key; newChannelInput.value=''; saveState(); render();
+    });
+
+    // send button & Enter key
+    sendBtn.addEventListener('click', sendMessage);
+    msgInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); sendMessage(); } });
+
+    // initialize
+    render();
+
+    // expose for debugging
+    window._dc_demo = { state, render, saveState };
+  </script>
+</body>
+</html>
