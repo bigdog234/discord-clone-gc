@@ -1,98 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Discord-Style Chat (Login + Servers)</title>
-
-  <!-- Link to external CSS (request 'c' to get the CSS file) -->
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord-Style Chat</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
+  <div class="servers">
+    <div class="server">GC</div>
+    <div class="server small">+</div>
+  </div>
 
-  <!-- ===== LOGIN SCREEN ===== -->
-  <div id="login" class="center">
-    <div class="login-box">
-      <h2>Create / Login</h2>
+  <div class="channels" id="channelList">
+    <div class="title">CHANNELS</div>
 
-      <label for="username">Username</label>
-      <input id="username" placeholder="Username" autocomplete="username" />
-
-      <label for="password">Password</label>
-      <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-
-      <button id="createAccountBtn">Create Account</button>
-      <button id="loginBtn">Login</button>
-
-      <p id="login-msg" class="error"></p>
-      <p class="hint">Usernames are filtered for profanity. Your servers are private to your account.</p>
+    <div class="new-channel-wrap">
+      <input 
+        id="newChannelInput" 
+        placeholder="New channel" 
+        class="new-channel-input"
+      />
+      <button id="addChannelBtn" class="new-channel-btn">Add</button>
     </div>
   </div>
 
-  <!-- ===== MAIN APP (hidden until login) ===== -->
-  <div id="app" class="app" style="display:none;">
+  <div class="chat">
+    <div class="header">
+      <div id="headerChannel" class="header-title"># general</div>
+    </div>
 
-    <!-- LEFT: Server list (each server has a code) -->
-    <aside id="serverList" class="servers" aria-label="Your servers">
-      <!-- populated by JS -->
-    </aside>
+    <div class="messages" id="messages"></div>
 
-    <!-- MIDDLE: Channels + Chat -->
-    <section class="main">
-
-      <!-- Channels panel -->
-      <div class="channels">
-        <div class="channels-header">
-          <h3 id="serverName">Select a server</h3>
-        </div>
-
-        <div id="channelList" class="channel-list">
-          <!-- channels inserted here -->
-        </div>
-
-        <div class="channel-creator">
-          <input id="newChannel" placeholder="New channel name" />
-          <button id="createChannelBtn">Add Channel</button>
-        </div>
-
-        <div class="server-actions">
-          <button id="leaveServerBtn">Leave Server</button>
-          <button id="deleteServerBtn">Delete Server</button>
-        </div>
-      </div>
-
-      <!-- Chat panel -->
-      <div class="chat">
-        <header class="chat-header">
-          <div id="headerChannel"># —</div>
-        </header>
-
-        <main id="messages" class="messages" aria-live="polite">
-          <!-- messages rendered here -->
-        </main>
-
-        <div class="input-area">
-          <input id="msgInput" placeholder="Message... (press Enter to send)" />
-          <button id="sendBtn">Send</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- RIGHT: Members -->
-    <aside id="members" class="members" aria-label="Members">
-      <div class="members-header">ONLINE</div>
-      <div id="membersList" class="members-list"></div>
-    </aside>
+    <!-- CENTERED INPUT BOX -->
+    <div class="composer">
+      <input 
+        id="messageInput" 
+        type="text" 
+        placeholder="Message — press Enter to send"
+        class="message-box"
+        autocomplete="off"
+      />
+      <button id="sendBtn">Send</button>
+    </div>
   </div>
 
-  <!-- Fallback note if JS is disabled -->
-  <noscript>
-    <div style="background:#ffdddd;color:#660000;padding:12px;text-align:center;">
-      This app requires JavaScript. Please enable JavaScript in your browser.
-    </div>
-  </noscript>
-
-  <!-- Link to external JS (request 'j' to get the JS file) -->
-  <script src="app.js" defer></script>
+  <script src="script.js"></script>
 </body>
 </html>
