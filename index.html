@@ -1,209 +1,51 @@
-/* ===== COLORS ===== */
-:root {
-  --bg: #313338;
-  --panel: #2b2d31;
-  --accent: #5865f2;
-  --muted: #9aa0a6;
-  --card: #2b2d31;
-  --input: #1e1f22;
-  --white: #e6e6e6;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord-Style Chat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+<body>
+  <div class="servers">
+    <div class="server">GC</div>
+    <div class="server small">+</div>
+  </div>
 
-html, body {
-  height: 100%;
-  background: var(--bg);
-  font-family: Segoe UI, Inter, system-ui;
-  color: var(--white);
-  display: flex;
-}
+  <div class="channels" id="channelList">
+    <div class="title">CHANNELS</div>
 
-/* ===== LEFT SERVER COLUMN ===== */
-.servers {
-  width: 72px;
-  background: #1e1f22;
-  padding: 12px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
+    <div class="new-channel-wrap">
+      <input 
+        id="newChannelInput" 
+        placeholder="New channel" 
+        class="new-channel-input"
+      />
+      <button id="addChannelBtn" class="new-channel-btn">Add</button>
+    </div>
+  </div>
 
-.server {
-  width: 48px;
-  height: 48px;
-  background: var(--accent);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  cursor: pointer;
-}
+  <div class="chat">
+    <div class="header">
+      <div id="headerChannel" class="header-title"># general</div>
+    </div>
 
-.server.small {
-  background: #2f3136;
-  color: var(--muted);
-}
+    <div class="messages" id="messages"></div>
 
-/* ===== CHANNEL LIST ===== */
-.channels {
-  width: 260px;
-  background: var(--panel);
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-}
+    <!-- CENTERED INPUT BOX -->
+    <div class="composer">
+      <input 
+        id="messageInput" 
+        type="text" 
+        placeholder="Message — press Enter to send"
+        class="message-box"
+        autocomplete="off"
+      />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
 
-.title {
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.channel {
-  padding: 8px 10px;
-  margin-bottom: 6px;
-  border-radius: 6px;
-  background: none;
-  color: var(--white);
-  opacity: 0.9;
-  cursor: pointer;
-}
-
-.channel:hover {
-  background: #3b3e44;
-}
-
-.channel.active {
-  background: #404249;
-}
-
-/* ===== CHANNEL CREATION ===== */
-.new-channel-wrap {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.new-channel-input {
-  flex: 1;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #232428;
-  background: #26282b;
-  color: var(--white);
-}
-
-.new-channel-btn {
-  padding: 8px 12px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-/* ===== CHAT SECTION ===== */
-.chat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-}
-
-.header {
-  height: 56px;
-  background: var(--panel);
-  border-bottom: 1px solid #232428;
-  display: flex;
-  align-items: center;
-  padding: 12px 18px;
-}
-
-.header-title {
-  font-weight: 700;
-}
-
-/* ===== MESSAGE AREA ===== */
-.messages {
-  flex: 1;
-  padding: 18px;
-  overflow-y: auto;
-}
-
-.msg {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  background: #444;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-}
-
-.bubble {
-  background: var(--card);
-  padding: 10px 12px;
-  border-radius: 8px;
-}
-
-.meta {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-
-/* ===== MESSAGE INPUT (CENTERED) ===== */
-.composer {
-  background: var(--panel);
-  border-top: 1px solid #232428;
-  padding: 14px;
-  display: flex;
-  justify-content: center;     /* CENTER the input */
-  align-items: center;
-  gap: 12px;
-}
-
-.message-box {
-  width: 60%;                  /* <-- centered width */
-  padding: 12px;
-  background: var(--input);
-  border: 1px solid #2b2d31;
-  border-radius: 8px;
-  color: var(--white);
-  outline: none;
-}
-
-#sendBtn {
-  background: var(--accent);
-  color: white;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-/* ===== MOBILE ===== */
-@media (max-width: 900px) {
-  .channels {
-    display: none;
-  }
-
-  .message-box {
-    width: 80%;
-  }
-}
-
-  
+  <script src="script.js"></script>
+</body>
+</html>
