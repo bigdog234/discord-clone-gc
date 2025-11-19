@@ -1,230 +1,147 @@
-/* ===============================
-   Discord-Style Chat — app.js
-   =============================== */
+// ===== SIMPLE DISCORD-STYLE CHAT ENGINE =====
 
-/* ---------- BAD WORD FILTER ---------- */
-const badWords = ["fuck","shit","bitch","ass","bastard","hoe","slut","dick","cunt","nigger","retard"];
-function cleanName(name) {
-  let clean = name;
-  for (const w of badWords) {
-    clean = clean.replace(new RegExp(w, "gi"), "***");
-  }
-  return clean;
+// Create a random ID for messages
+function genId() {
+  return Math.random().toString(36).substring(2, 10);
 }
 
-/* ---------- LOAD / SAVE USERS ---------- */
-let users = JSON.parse(localStorage.getItem("users") || "{}");
-let currentUser = null;
-let currentServer = null;
-let currentChannel = null;
+// Default system state (if no saved data)
+const defaultState = {
+  channels: {
+    general: {
+      name: "general",
+      messages: [
+        { id: genId(), author: "System", text: "Welcome!", t: Date.now() }
+      ]
+    }
+  },
+  current: "general",
+  user: "You"
+};
 
+// Load from localStorage or use default
+let state = JSON.parse(localStorage.getItem("chatState")) || defaultState;
+
+// Save to localStorage
 function save() {
-  localStorage.setItem("users", JSON.stringify(users));
+  localStorage.setItem("chatState", JSON.stringify(state));
 }
 
-/* ---------- LOGIN / ACCOUNT CREATION ---------- */
-function showMsg(txt) {
-  document.getElementById("login-msg").innerText = txt;
-}
+// ===== DOM ELEMENTS =====
+const msgInput = document.getElementById("messageInput");
+const msgs = document.getElementById("messages");
+const header = document.getElementById("headerChannel");
+const sendBtn = document.getElementById("sendBtn");
+const channelList = document.getElementById("channelList");
+const newChannelInput = document.getElementById("newChannelInput");
+const addChannelBtn = document.getElementById("addChannelBtn");
 
-document.getElementById("createAccountBtn").onclick = () => {
-  let user = cleanName(document.getElementById("username").value.trim());
-  let pass = document.getElementById("password").value;
+// ===== RENDER CHANNEL LIST =====
+function renderChannels() {
+  document.querySelectorAll(".channel").forEach(c => c.remove());
 
-  if (!user || !pass) return showMsg("Enter username and password");
+  const keys = Object.keys(state.channels);
 
-  if (users[user]) return showMsg("User already exists");
+  keys.forEach(key => {
+    const c = document.createElement("div");
+    c.className = "channel" + (state.current === key ? " active" : "");
+    c.textContent = "# " + state.channels[key].name;
+    c.dataset.key = key;
 
-  users[user] = {
-    password: pass,
-    servers: {}
-  };
+    c.onclick = () => {
+      state.current = key;
+      save();
+      render();
+    };
 
-  save();
-  showMsg("Account created. Now login.");
-};
-
-document.getElementById("loginBtn").onclick = () => {
-  let user = document.getElementById("username").value.trim();
-  let pass = document.getElementById("password").value;
-
-  if (!users[user] || users[user].password !== pass)
-    return showMsg("Invalid username or password");
-
-  currentUser = user;
-  document.getElementById("login").style.display = "none";
-  document.getElementById("app").style.display = "flex";
-  loadServers();
-};
-
-/* ---------- SERVERS ---------- */
-function loadServers() {
-  const list = document.getElementById("serverList");
-  list.innerHTML = "";
-
-  const userData = users[currentUser].servers;
-
-  Object.keys(userData).forEach(code => {
-    const btn = document.createElement("button");
-    btn.className = "server-btn";
-    btn.textContent = code;
-    btn.onclick = () => openServer(code);
-    list.appendChild(btn);
-  });
-
-  const plus = document.createElement("button");
-  plus.className = "server-add";
-  plus.textContent = "+";
-  plus.onclick = createServer;
-  list.appendChild(plus);
-}
-
-function createServer() {
-  let name = prompt("Server name:");
-  if (!name) return;
-
-  name = cleanName(name);
-  let code = Math.random().toString(36).substring(2, 7);
-
-  users[currentUser].servers[code] = {
-    name,
-    channels: {}
-  };
-
-  save();
-  loadServers();
-}
-
-function openServer(code) {
-  currentServer = code;
-  const serverData = users[currentUser].servers[code];
-
-  document.getElementById("serverName").textContent =
-    `${serverData.name} (${code})`;
-
-  loadChannels();
-}
-
-/* ---------- CHANNELS ---------- */
-function loadChannels() {
-  const list = document.getElementById("channelList");
-  list.innerHTML = "";
-
-  const channels = users[currentUser].servers[currentServer].channels;
-
-  Object.keys(channels).forEach(ch => {
-    const btn = document.createElement("button");
-    btn.className = "channel-btn";
-    btn.textContent = "#" + ch;
-    btn.onclick = () => openChannel(ch);
-    list.appendChild(btn);
+    channelList.insertBefore(c, channelList.children[1]);
   });
 }
 
-document.getElementById("createChannelBtn").onclick = () => {
-  if (!currentServer) return alert("Open a server first");
-  const name = cleanName(document.getElementById("newChannel").value.trim());
-  if (!name) return;
+// ===== RENDER MESSAGES =====
+function renderMessages() {
+  msgs.innerHTML = "";
 
-  users[currentUser].servers[currentServer].channels[name] = [];
-  save();
-  document.getElementById("newChannel").value = "";
-  loadChannels();
-};
+  let channel = state.channels[state.current];
+  header.textContent = "# " + channel.name;
 
-function openChannel(ch) {
-  currentChannel = ch;
-  document.getElementById("headerChannel").textContent = "#" + ch;
-  loadMessages();
-}
+  channel.messages.forEach(m => {
+    const row = document.createElement("div");
+    row.className = "msg";
 
-/* ---------- MESSAGES ---------- */
-function loadMessages() {
-  const box = document.getElementById("messages");
-  box.innerHTML = "";
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = m.author.charAt(0).toUpperCase();
 
-  if (!currentServer || !currentChannel) return;
+    const content = document.createElement("div");
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = `${m.author} • ${new Date(m.t).toLocaleString()}`;
 
-  const msgs =
-    users[currentUser]
-      .servers[currentServer]
-      .channels[currentChannel];
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = m.text;
 
-  msgs.forEach(m => {
-    const div = document.createElement("div");
-    div.className = "message";
-    div.innerHTML = `<span class="sender">${m.user}:</span> ${m.text}`;
-    box.appendChild(div);
+    content.appendChild(meta);
+    content.appendChild(bubble);
+
+    row.appendChild(avatar);
+    row.appendChild(content);
+
+    msgs.appendChild(row);
   });
 
-  box.scrollTop = box.scrollHeight;
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
+// ===== SEND MESSAGE =====
 function sendMessage() {
-  if (!currentServer || !currentChannel) return;
+  let txt = msgInput.value.trim();
+  if (!txt) return;
 
-  const input = document.getElementById("msgInput");
-  const text = input.value.trim();
-  if (!text) return;
+  state.channels[state.current].messages.push({
+    id: genId(),
+    author: state.user,
+    text: txt,
+    t: Date.now()
+  });
 
-  users[currentUser]
-    .servers[currentServer]
-    .channels[currentChannel]
-    .push({
-      user: currentUser,
-      text
-    });
-
-  input.value = "";
+  msgInput.value = "";
   save();
-  loadMessages();
+  renderMessages();
 }
 
-document.getElementById("sendBtn").onclick = sendMessage;
+// ===== CREATE NEW CHANNEL =====
+addChannelBtn.onclick = () => {
+  let name = newChannelInput.value.trim().toLowerCase();
+  if (!name) return;
 
-document.getElementById("msgInput").addEventListener("keydown", e => {
+  if (state.channels[name]) {
+    alert("This channel already exists.");
+    return;
+  }
+
+  state.channels[name] = { name, messages: [] };
+  state.current = name;
+
+  newChannelInput.value = "";
+  save();
+  render();
+};
+
+// ===== KEYBOARD + BUTTON SEND =====
+sendBtn.onclick = sendMessage;
+
+msgInput.addEventListener("keydown", e => {
   if (e.key === "Enter") {
-    e.preventDefault();
     sendMessage();
   }
 });
 
-/* ---------- SERVER ACTIONS ---------- */
-document.getElementById("deleteServerBtn").onclick = () => {
-  if (!currentServer) return alert("No server selected");
-
-  if (!confirm("Delete this server?")) return;
-
-  delete users[currentUser].servers[currentServer];
-  save();
-  currentServer = null;
-  currentChannel = null;
-  loadServers();
-  document.getElementById("serverName").textContent = "Select a server";
-  document.getElementById("messages").innerHTML = "";
-};
-
-document.getElementById("leaveServerBtn").onclick = () => {
-  if (!currentServer) return alert("No server selected");
-
-  delete users[currentUser].servers[currentServer];
-  save();
-  currentServer = null;
-  currentChannel = null;
-  loadServers();
-  document.getElementById("serverName").textContent = "Select a server";
-  document.getElementById("messages").innerHTML = "";
-};
-
-/* ---------- MEMBERS (placeholder for now) ---------- */
-function loadMembers() {
-  const list = document.getElementById("membersList");
-  list.innerHTML = "";
-
-  const div = document.createElement("div");
-  div.className = "member";
-  div.textContent = currentUser + " (You)";
-  list.appendChild(div);
+// ===== INITIAL RENDER =====
+function render() {
+  renderChannels();
+  renderMessages();
 }
 
-setInterval(loadMembers, 1000);
+render();
