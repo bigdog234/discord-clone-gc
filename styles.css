@@ -1,14 +1,4 @@
-/* ===== COLORS ===== */
-:root {
-  --bg: #313338;
-  --panel: #2b2d31;
-  --accent: #5865f2;
-  --muted: #9aa0a6;
-  --card: #2b2d31;
-  --input: #1e1f22;
-  --white: #e6e6e6;
-}
-
+/* ---------- RESET ---------- */
 * {
   margin: 0;
   padding: 0;
@@ -17,62 +7,62 @@
 
 html, body {
   height: 100%;
-  background: var(--bg);
-  font-family: Segoe UI, Inter, system-ui;
-  color: var(--white);
-  display: flex;
+  font-family: Arial, sans-serif;
+  background: #313338;
+  color: white;
 }
 
-/* ===== LEFT SERVER COLUMN ===== */
+/* ---------- MAIN LAYOUT ---------- */
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+/* ---------- SERVER BAR (LEFT) ---------- */
 .servers {
-  width: 72px;
+  width: 70px;
   background: #1e1f22;
-  padding: 12px 8px;
+  padding: 12px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .server {
   width: 48px;
   height: 48px;
-  background: var(--accent);
+  background: #5865f2;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: bold;
   cursor: pointer;
 }
 
 .server.small {
   background: #2f3136;
-  color: var(--muted);
 }
 
-/* ===== CHANNEL LIST ===== */
+/* ---------- CHANNEL LIST ---------- */
 .channels {
   width: 260px;
-  background: var(--panel);
+  background: #2b2d31;
   padding: 14px;
-  display: flex;
-  flex-direction: column;
 }
 
-.title {
+.channels .title {
   font-weight: bold;
   margin-bottom: 10px;
 }
 
 .channel {
-  padding: 8px 10px;
-  margin-bottom: 6px;
+  padding: 8px;
   border-radius: 6px;
-  background: none;
-  color: var(--white);
-  opacity: 0.9;
   cursor: pointer;
+  margin-bottom: 6px;
+  opacity: 0.9;
 }
 
 .channel:hover {
@@ -83,59 +73,31 @@ html, body {
   background: #404249;
 }
 
-/* ===== CHANNEL CREATION ===== */
-.new-channel-wrap {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.new-channel-input {
-  flex: 1;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #232428;
-  background: #26282b;
-  color: var(--white);
-}
-
-.new-channel-btn {
-  padding: 8px 12px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-/* ===== CHAT SECTION ===== */
+/* ---------- CHAT AREA ---------- */
 .chat {
   flex: 1;
+  background: #313338;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
 }
 
-.header {
+/* Header */
+.chat .header {
   height: 56px;
-  background: var(--panel);
+  padding: 15px;
+  background: #2b2d31;
   border-bottom: 1px solid #232428;
-  display: flex;
-  align-items: center;
-  padding: 12px 18px;
+  font-weight: bold;
 }
 
-.header-title {
-  font-weight: 700;
-}
-
-/* ===== MESSAGE AREA ===== */
+/* Messages */
 .messages {
   flex: 1;
-  padding: 18px;
+  padding: 20px;
   overflow-y: auto;
 }
 
+/* Message bubble */
 .msg {
   display: flex;
   gap: 12px;
@@ -145,63 +107,67 @@ html, body {
 .avatar {
   width: 40px;
   height: 40px;
-  background: #444;
+  background: #555;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
 }
 
+/* Bubble */
 .bubble {
-  background: var(--card);
+  background: #2b2d31;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .meta {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 4px;
 }
 
-/* ===== MESSAGE INPUT (CENTERED) ===== */
+/* ---------- TEXT BOX (CENTERED) ---------- */
 .composer {
-  background: var(--panel);
-  border-top: 1px solid #232428;
   padding: 14px;
+  background: #2b2d31;
+  border-top: 1px solid #232428;
+
+  /* centers the input bar */
   display: flex;
-  justify-content: center;     /* CENTER the input */
-  align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 10px;
 }
 
-.message-box {
-  width: 60%;                  /* <-- centered width */
+.composer input {
+  width: 60%;  /* centered + reasonable size */
   padding: 12px;
-  background: var(--input);
-  border: 1px solid #2b2d31;
   border-radius: 8px;
-  color: var(--white);
-  outline: none;
+  border: none;
+  background: #1e1f22;
+  color: white;
 }
 
-#sendBtn {
-  background: var(--accent);
-  color: white;
-  padding: 10px 16px;
-  border: none;
+.composer button {
+  padding: 12px 16px;
   border-radius: 8px;
+  background: #5865f2;
+  border: none;
+  color: white;
   cursor: pointer;
 }
 
-/* ===== MOBILE ===== */
-@media (max-width: 900px) {
-  .channels {
-    display: none;
-  }
+/* ---------- MEMBERS LIST (RIGHT) ---------- */
+.members {
+  width: 220px;
+  background: #2b2d31;
+  padding: 14px;
+  border-left: 1px solid #232428;
+}
 
-  .message-box {
-    width: 80%;
-  }
+.member {
+  background: #3b3e44;
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
 }
